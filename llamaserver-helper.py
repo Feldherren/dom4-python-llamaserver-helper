@@ -60,6 +60,7 @@ import configparser
 import email
 import os
 import sys
+import re
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -70,6 +71,38 @@ address = config['Mail']['email']
 password = config['Mail']['password']
 datadir = config['Game']['datadir']
 game = config['Game']['gamename']
+
+# regex for matching text of pretender-confirmation email
+# match groups, in order: nation, game name
+pretender_reply_email_text_regex = re.compile(r"This is just to confirm that I've received a pretender file from you for (\w+) in the game (\w+), and everything seems to be fine with it\.", re.IGNORECASE)
+
+# regex for matching subject of game-start email
+# match group: game name
+first_turn_email_subject_regex = re.compile(r"(\w+) started! First turn attached", re.IGNORECASE)
+
+# regex for matching first-turn file email
+# match groups, in order: game name, turn due time, timezone, day, month, day-date, ordinal indicator
+# the last probably isn't necessary but is hard to match otherwise?
+first_turn_email_text_regex = re.compile(r"Hello! The Dominions 4 game (\w+) has just started, and your first turn file is attached\. Please send your 2h file back to this address \(turns@llamaserver.net\)\. It doesn't matter what you put as the subject or in the message text\. If you want, you can zip the 2h file up first \(\.zip, \.rar or \.gz files are fine\)\. The first turn is due in by (\d\d:\d\d) (\w\w\w) on (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (January|February|March|April|May|June|July|August|September|October|November|December) (\d+)(th|nd|rd|st)\.", re.IGNORECASE)
+
+# regex for matching subject of turn file confirmation emails from llamaserver
+# match groups, in order: game name, turn number, nation
+turn_received_email_subject_regex re.compile(r"(\w+): Turn (\d+) received for (\w+)", re.IGNORECASE)
+
+def getGames(data_dir):
+	games_list = []
+	games_list = [os.path.basename(x[0]) for x in os.walk(os.path.join(data_dir, "savedgames"))]
+	# remove guaranteed subfolders that aren't actually games
+	games_list.remove("newlords")
+	games_list.remove("savedgames")
+	#print(games_list)
+	return games_list
+	
+def listPretenders():
+	return
+	
+def getPretender():
+	return
 
 # note that if you want to get text content (body) and the email contains
 # multiple payloads (plaintext/ html), you must parse each message separately.
@@ -120,13 +153,7 @@ def parseMail(raw_email):
 	# should obviously do other things, here, but for now it's nice it iterates through
 	return
 	
-def listPretenders():
-	return
-	
-def getPretender():
-	return
-	
-def sendEmailWithAttachment(attachment_path, subject, recipient_address):
+def sendEmail(subject, recipient_address, attachment_path=None):
 	# attachment_path: full path
 	# subject: needs to be the game name, for at least pretender
 	# recipient address: pretenders@llamaserver.net for pretenders, turns@llamaserver.net for turns
@@ -138,25 +165,26 @@ def sendEmailWithAttachment(attachment_path, subject, recipient_address):
 	# make sure it gets and attaches the correct .2h file; should be something like mid_machaka.2h - age_nation.2h; pretender file, though
 	# should be in \savedgames\newlords under datadir
 	recipient = recipient_address
-	try:
-		with open(attachment_path, 'rb') as fp:
-			msg = MIMEBase("application", "octet-stream")
-			msg.set_payload(fp.read())
-		encoders.encode_base64(msg)
-		msg.add_header("Content-Disposition", "attachment", filename=os.path.basename(attachment_path))
-		outer.attach(msg)
-	except:
-		print("Unable to open one of the attachments. Error: ", sys.exc_info()[0])
-		raise
+	if attachment_path is not None:
+		try:
+			with open(attachment_path, 'rb') as fp:
+				msg = MIMEBase("application", "octet-stream")
+				msg.set_payload(fp.read())
+			encoders.encode_base64(msg)
+			msg.add_header("Content-Disposition", "attachment", filename=os.path.basename(attachment_path))
+			outer.attach(msg)
+		except:
+			print("Unable to open one of the attachments. Error: ", sys.exc_info()[0])
+			raise
 	
 	composed = outer.as_string()
 	
-	# send to recipient (llamaserver) here
+	# send to recipient here
 	try:
 		with smtplib.SMTP('smtp.gmail.com', 587) as s:
-			s.ehlo()
+			#s.ehlo() # what does this do?
 			s.starttls()
-			s.ehlo()
+			#s.ehlo() # what does this do? again?
 			s.login(address, password)
 			s.sendmail(address, recipient, composed)
 			s.close()
@@ -191,6 +219,9 @@ for uid in email_uids:
 	raw_email = getEmail(uid)
 	parseMail(raw_email)
 
-sendEmailWithAttachment(r"C:\Users\Rebecca\AppData\Roaming\Dominions4\savedgames\newlords\mid_ys_0.2h", "test_game", "rpaliwoda@googlemail.com")
+#sendEmail("test_game", "rpaliwoda@googlemail.com", r"C:\Users\Rebecca\AppData\Roaming\Dominions4\savedgames\newlords\mid_ys_0.2h")
+#sendEmail("test_game", "rpaliwoda@googlemail.com")
+
+game_list = getGames(datadir)
 
 # https://yuji.wordpress.com/2011/06/22/python-imaplib-imap-example-with-gmail/ mentions we need to do other stuff to get at the text of it. Not sure how to get at the attachment, as we may not care about the text
