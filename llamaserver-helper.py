@@ -54,6 +54,13 @@
 # turn number - can get this from latest turn-email from llamaserver
 # state - see above
 
+# save old turns in a subfolder?
+# delete old emails?
+
+# command line menus:
+# before making menus, display all games
+# initial menu
+
 import imaplib
 import smtplib
 import configparser
@@ -81,15 +88,24 @@ pretender_reply_email_text_regex = re.compile(r"This is just to confirm that I'v
 first_turn_email_subject_regex = re.compile(r"(\w+) started! First turn attached", re.IGNORECASE)
 
 # regex for matching first-turn file email
-# match groups, in order: game name, turn due time, timezone, day, month, day-date, ordinal indicator
+# match groups, in order: turn due time, timezone, day, month, day-date, ordinal indicator
 # the last probably isn't necessary but is hard to match otherwise?
-first_turn_email_text_regex = re.compile(r"Hello! The Dominions 4 game (\w+) has just started, and your first turn file is attached\. Please send your 2h file back to this address \(turns@llamaserver.net\)\. It doesn't matter what you put as the subject or in the message text\. If you want, you can zip the 2h file up first \(\.zip, \.rar or \.gz files are fine\)\. The first turn is due in by (\d\d:\d\d) (\w\w\w) on (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (January|February|March|April|May|June|July|August|September|October|November|December) (\d+)(th|nd|rd|st)\.", re.IGNORECASE)
+#first_turn_email_text_regex = re.compile(r"Hello! The Dominions 4 game (\w+) has just started, and your first turn file is attached\. Please send your 2h file back to this address \(turns@llamaserver.net\)\. It doesn't matter what you put as the subject or in the message text\. If you want, you can zip the 2h file up first \(\.zip, \.rar or \.gz files are fine\)\. The first turn is due in by (\d\d:\d\d) (\w\w\w) on (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (January|February|March|April|May|June|July|August|September|October|November|December) (\d+)(th|nd|rd|st)\.", re.IGNORECASE)
+first_turn_email_text_regex = re.compile(r"The first turn is due in by (\d\d:\d\d) (\w\w\w) on (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (January|February|March|April|May|June|July|August|September|October|November|December) (\d+)(th|nd|rd|st)\.", re.IGNORECASE)
 
-# regex for matching subject of turn file confirmation emails from llamaserver
+# regex for matching subject of .trn file confirmation emails from llamaserver
 # match groups, in order: game name, turn number, nation
-turn_received_email_subject_regex re.compile(r"(\w+): Turn (\d+) received for (\w+)", re.IGNORECASE)
+turn_received_email_subject_regex = re.compile(r"(\w+): Turn (\d+) received for (\w+)", re.IGNORECASE)
 
-def getGames(data_dir):
+# regex for matching subject of second and onwards .trn file emails from llamaserver
+# match groups, in order: game name, nation, turn number
+turn_file_email_subject_regex = re.compile(r"New turn file: (\w+), (\w+) turn (\d+)", re.IGNORECASE)
+
+# regex for getting next turn deadline from second and onwards .trn file emails from llamaserver
+# match groups, in order: turn due time, timezone, day, month, day-date, ordinal indicator
+turn_file_email_text_regex = re.compile(r"The next 2h file is due in by (\d\d:\d\d) (\w\w\w) on (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) (January|February|March|April|May|June|July|August|September|October|November|December) (\d+)(th|nd|rd|st)")
+
+def getGamesList(data_dir):
 	games_list = []
 	games_list = [os.path.basename(x[0]) for x in os.walk(os.path.join(data_dir, "savedgames"))]
 	# remove guaranteed subfolders that aren't actually games
@@ -97,6 +113,10 @@ def getGames(data_dir):
 	games_list.remove("savedgames")
 	#print(games_list)
 	return games_list
+
+def getGameStatus(game_name):
+	# for now this just returns 'unknown', but later on it should be able to determine game status (probably from emails?)
+	return "unknown"
 	
 def listPretenders():
 	return
@@ -182,9 +202,7 @@ def sendEmail(subject, recipient_address, attachment_path=None):
 	# send to recipient here
 	try:
 		with smtplib.SMTP('smtp.gmail.com', 587) as s:
-			#s.ehlo() # what does this do?
 			s.starttls()
-			#s.ehlo() # what does this do? again?
 			s.login(address, password)
 			s.sendmail(address, recipient, composed)
 			s.close()
@@ -208,20 +226,36 @@ outmail.starttls()
 # only gets the latest email in inbox (or other folder); if the latest e-mail is deleted or moved it'll go for the new latest e-mail
 # though this is useful if we know the file for the turn is going to be the latest e-mail
 # http://stackoverflow.com/questions/2983647/how-do-you-iterate-through-each-email-in-your-inbox-using-python has an example for iterating through a mailbox
-result, data = mail.uid('search', None, "ALL") 
+result, data = mail.uid('search', None, "ALL") # change second parameter to search for string? this is essentially IMAP4.search() but returning UIDs; https://docs.python.org/3/library/imaplib.html?highlight=map#imaplib.IMAP4.search
 #latest_email_uid = data[0].split()[-1] # ditch the [-1], get list of mail IDs? Or do result, data already hold everything?
 #raw_email = getEmail(latest_email_uid)
 #parseMail(raw_email)
 
 # gets all emails in the current mailbox; the inbox, in this case
-email_uids = data[0].split()
-for uid in email_uids:
-	raw_email = getEmail(uid)
-	parseMail(raw_email)
+#email_uids = data[0].split()
+#for uid in email_uids:
+#	raw_email = getEmail(uid)
+#	parseMail(raw_email)
 
 #sendEmail("test_game", "rpaliwoda@googlemail.com", r"C:\Users\Rebecca\AppData\Roaming\Dominions4\savedgames\newlords\mid_ys_0.2h")
 #sendEmail("test_game", "rpaliwoda@googlemail.com")
 
-game_list = getGames(datadir)
+# bits of this can probably go into functions
+gameList = getGamesList(datadir)
+gameData = dict()
+gameMenuList = dict()
+listNo = 1
+for game in gameList:
+	# populating dict of game data; 0: state
+	gameData[game] = (getGameStatus(game), "era", "turn", "nation")
+	# setting up list of games for menu
+	gameMenuList[listNo] = game
+	# incrementing listNo
+	listNo = listNo + 1
+
+#print(game_menu)
+	
+for gameNo in gameMenuList:
+	print(str(gameNo) + ".", gameMenuList[gameNo], "(state: " + gameData[gameMenuList[gameNo]][0] + ")")
 
 # https://yuji.wordpress.com/2011/06/22/python-imaplib-imap-example-with-gmail/ mentions we need to do other stuff to get at the text of it. Not sure how to get at the attachment, as we may not care about the text
