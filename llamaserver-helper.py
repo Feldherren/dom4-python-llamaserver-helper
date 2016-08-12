@@ -40,7 +40,7 @@
 # waiting for llamaserver next turn
 # game ended
 
-# emails come from turns@llamaserver.com, always?
+# emails come from turns@llamaserver.net, always?
 
 # may be able to make application handle more than one game simultaneously: dropdown list to select game, show details and controls for game?
 
@@ -156,21 +156,15 @@ def getEmail(uid):
 
 def parseMail(raw_email):
 	email_message = email.message_from_bytes(raw_email)
-	if email_message['To'] is not None:
-		# only check emails from llamaserver: all llamaserver emails seem to come from turns@llamaserver.com
-		#if email.utils.parseaddr(email_message['From'])[1] == 'turns@llamaserver.com': 
+	#if email_message['To'] is not None:
+	# only check emails from llamaserver: all llamaserver emails come from turns@llamaserver.net
+	if email.utils.parseaddr(email_message['From'])[1] == 'turns@llamaserver.net': 
 		email_to = email_message['To']
 		email_from = email.utils.parseaddr(email_message['From']) # for parsing "Yuji Tomita" <yuji@grovemade.com>
 		email_subject = email_message['Subject']
 		email_text = get_first_text_block(email_message)
-		print(email_to)
-		print(email_from)
-		print(email_subject)
-		print(email_text.strip())
-		#for textblock in getTextBlocks(email_message):
-		#	print(textblock)
-		print('-----')
-	# should obviously do other things, here, but for now it's nice it iterates through
+	# should this return the to/from/subject/text details, or should it branch out and do stuff depending on email content?
+	# I think it should do stuff; use regex to check type
 	return
 	
 def sendEmail(subject, recipient_address, attachment_path=None):
