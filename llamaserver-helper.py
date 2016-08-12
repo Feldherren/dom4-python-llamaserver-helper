@@ -114,7 +114,7 @@ def getGamesList(data_dir):
 	#print(games_list)
 	return games_list
 
-def getGameStatus(game_name):
+def getGameStatus(gameName):
 	# for now this just returns 'unknown', but later on it should be able to determine game status (probably from emails?)
 	return "unknown"
 	
@@ -122,6 +122,21 @@ def listPretenders():
 	return
 	
 def getPretender():
+	return
+
+def sendPretender(pretenderFile):
+	pretenderPath = os.path.join(datadir, "savedgames", "newlords", pretenderfile)
+	# TO-DO: make sure pretender file exists
+	# send pretender file to pretenders@llamaserver.net
+	sendEmail(gameName, "pretenders@llamaserver.net", pretenderPath)
+	return
+
+def sendTurn(gameName):
+	gameDir = os.path.join(datadir,gameName)
+	# find correct 2h file here; don't forget game folder can contain more than one 2h, so we need to know nation to do this properly
+	# name format is [early/mid/late]_[nation].2h but all 2h files present should have the same era prefix
+	#turnFile = 
+	sendEmail(gameName, "turns@llamaserver.net", turnFile)
 	return
 
 # note that if you want to get text content (body) and the email contains
@@ -175,7 +190,7 @@ def sendEmail(subject, recipient_address, attachment_path=None):
 	outer = MIMEMultipart()
 	outer['From'] = address
 	outer['To'] = recipient_address
-	outer['Subject'] = subject # needs to be game name
+	outer['Subject'] = subject # needs to be game name, for pretender file; for turn 2h files apparently doesn't matter
 	# make sure it gets and attaches the correct .2h file; should be something like mid_machaka.2h - age_nation.2h; pretender file, though
 	# should be in \savedgames\newlords under datadir
 	recipient = recipient_address
