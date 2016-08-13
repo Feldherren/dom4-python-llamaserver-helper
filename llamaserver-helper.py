@@ -126,13 +126,17 @@ def getPretender():
 
 def sendPretender(pretenderFile):
 	pretenderPath = os.path.join(datadir, "savedgames", "newlords", pretenderfile)
-	# TO-DO: make sure pretender file exists
-	# send pretender file to pretenders@llamaserver.net
-	sendEmail(gameName, "pretenders@llamaserver.net", pretenderPath)
+	if os.path.isfile(pretenderPath):
+		# send pretender file to pretenders@llamaserver.net
+		sendEmail(gameName, "pretenders@llamaserver.net", pretenderPath)
+	else:
+		# error here; file doesn't exist (or can't be accessed)
+		print("Error: file not found")
 	return
 
-def sendTurn(gameName):
-	gameDir = os.path.join(datadir,gameName)
+def sendTurn(gameName, era, nation):
+	gameDir = os.path.join(datadir, "savedgames", gameName) # add 'era+"_"+nation+".2h"' to the end for full path to game, instead?
+	# TO-DO: complete this thing
 	# find correct 2h file here; don't forget game folder can contain more than one 2h, so we need to know nation to do this properly
 	# name format is [early/mid/late]_[nation].2h but all 2h files present should have the same era prefix
 	#turnFile = 
