@@ -135,12 +135,17 @@ def sendPretender(pretenderFile):
 	return
 
 def sendTurn(gameName, era, nation):
-	gameDir = os.path.join(datadir, "savedgames", gameName) # add 'era+"_"+nation+".2h"' to the end for full path to game, instead?
+	#gameDir = os.path.join(datadir, "savedgames", gameName) # add 'era+"_"+nation+".2h"' to the end for full path to game, instead?
 	# TO-DO: complete this thing
 	# find correct 2h file here; don't forget game folder can contain more than one 2h, so we need to know nation to do this properly
 	# name format is [early/mid/late]_[nation].2h but all 2h files present should have the same era prefix
-	#turnFile = 
-	sendEmail(gameName, "turns@llamaserver.net", turnFile)
+	turnFile = os.path.join(datadir, "savedgames", gameName, era+"_"+nation+".2h")
+	if os.path.isfile(turnFile):
+		# send .2h file to turns@llamaserver.net
+		sendEmail(gameName, "turns@llamaserver.net", turnFile)
+	else:
+		# error here; file doesn't exist (or can't be accessed)
+		print("Error: file not found")
 	return
 
 # note that if you want to get text content (body) and the email contains
