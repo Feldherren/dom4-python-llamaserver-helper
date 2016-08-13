@@ -63,6 +63,7 @@
 
 import imaplib
 import smtplib
+import argparse
 import configparser
 import email
 import os
@@ -72,12 +73,22 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 
+# argparse stuff; currently necessary for test command line interface way below
+parser = argparse.ArgumentParser(description='Handles sending and receiving .2h files and .trn files to and from llamaserver, for Dominions PBEM games')
+parser.add_argument('gameName', help='name of game, as shown on game folder')
+parser.add_argument('nation', help='nation played')
+parser.add_argument('era', help='era of game (early/mid/late)')
+args = parser.parse_args()
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 address = config['Mail']['email']
 password = config['Mail']['password']
 datadir = config['Game']['datadir']
-game = config['Game']['gamename']
+
+gameName = args.gameName
+nation = args.nation
+era = args.era
 
 # regex for matching text of pretender-confirmation email
 # match groups, in order: nation, game name
@@ -119,22 +130,25 @@ def getGameStatus(gameName):
 	return "unknown"
 	
 def listPretenders():
+	pretenderPath = os.path.join(datadir, "savedgames", "newlords")
+	# get all 2h files in here, put in list, return list
 	return
 	
 def getPretender():
 	return
 
-def sendPretender(pretenderFile):
-	pretenderPath = os.path.join(datadir, "savedgames", "newlords", pretenderfile)
+def sendPretender(game, pretenderFile):
+	pretenderPath = os.path.join(datadir, "savedgames", "newlords", pretenderFile)
+	# in spite of checking isfile, still get an error if a wrong pretenderFfile name is supplied
 	if os.path.isfile(pretenderPath):
 		# send pretender file to pretenders@llamaserver.net
-		sendEmail(gameName, "pretenders@llamaserver.net", pretenderPath)
+		sendEmail(game, "pretenders@llamaserver.net", pretenderPath)
 	else:
 		# error here; file doesn't exist (or can't be accessed)
 		print("Error: file not found")
 	return
 
-def sendTurn(gameName, era, nation):
+def sendTurn(game, era, nation):
 	#gameDir = os.path.join(datadir, "savedgames", gameName) # add 'era+"_"+nation+".2h"' to the end for full path to game, instead?
 	# TO-DO: complete this thing
 	# find correct 2h file here; don't forget game folder can contain more than one 2h, so we need to know nation to do this properly
@@ -147,6 +161,11 @@ def sendTurn(gameName, era, nation):
 		# error here; file doesn't exist (or can't be accessed)
 		print("Error: file not found")
 	return
+
+def getTurnFile(raw_email, game):
+	email_message = email.message_from_bytes(raw_email)
+	# create game folder if it doesn't exist?
+	saveAttachment(email_message, os.path.join(datadir, "savedgames", game))
 
 # note that if you want to get text content (body) and the email contains
 # multiple payloads (plaintext/ html), you must parse each message separately.
@@ -190,6 +209,20 @@ def parseMail(raw_email):
 	# should this return the to/from/subject/text details, or should it branch out and do stuff depending on email content?
 	# I think it should do stuff; use regex to check type
 	return
+
+# function mostly just for testing, here
+def printMail(raw_email):
+	email_message = email.message_from_bytes(raw_email)
+	if email_message['To'] is not None:
+		email_to = email_message['To']
+		email_from = email.utils.parseaddr(email_message['From']) # for parsing "Yuji Tomita" <yuji@grovemade.com>
+		email_subject = email_message['Subject']
+		email_text = get_first_text_block(email_message)
+		print(email_to)
+		print(email_from)
+		print(email_subject)
+		print(email_text)
+	return
 	
 def sendEmail(subject, recipient_address, attachment_path=None):
 	# attachment_path: full path
@@ -229,6 +262,24 @@ def sendEmail(subject, recipient_address, attachment_path=None):
 		print("Unable to send the email. Error: ", sys.exc_info()[0])
 		raise
 
+def saveAttachment(msg, download_folder="/tmp"):
+	# from http://stackoverflow.com/questions/6225763/downloading-multiple-attachments-using-imaplib
+	att_path = "No attachment found."
+	for part in msg.walk():
+		if part.get_content_maintype() == 'multipart':
+			continue
+		if part.get('Content-Disposition') is None:
+			continue
+
+		filename = part.get_filename()
+		att_path = os.path.join(download_folder, filename)
+
+		if not os.path.isfile(att_path):
+			fp = open(att_path, 'wb')
+			fp.write(part.get_payload(decode=True))
+			fp.close()
+	return att_path
+
 mail = imaplib.IMAP4_SSL('imap.gmail.com') # possibly allow users to change that in config, for other email sources
 try:
 	mail.login(address, password)
@@ -238,13 +289,13 @@ except:
 	
 mail.select("inbox") # possibly put this in config
 
-outmail = smtplib.SMTP('smtp.gmail.com:587')
-outmail.starttls()
+#outmail = smtplib.SMTP('smtp.gmail.com:587')
+#outmail.starttls()
 
 # only gets the latest email in inbox (or other folder); if the latest e-mail is deleted or moved it'll go for the new latest e-mail
 # though this is useful if we know the file for the turn is going to be the latest e-mail
 # http://stackoverflow.com/questions/2983647/how-do-you-iterate-through-each-email-in-your-inbox-using-python has an example for iterating through a mailbox
-result, data = mail.uid('search', None, "ALL") # change second parameter to search for string? this is essentially IMAP4.search() but returning UIDs; https://docs.python.org/3/library/imaplib.html?highlight=map#imaplib.IMAP4.search
+#result, data = mail.uid('search', None, "ALL") # change second parameter to search for string? this is essentially IMAP4.search() but returning UIDs; https://docs.python.org/3/library/imaplib.html?highlight=map#imaplib.IMAP4.search
 #latest_email_uid = data[0].split()[-1] # ditch the [-1], get list of mail IDs? Or do result, data already hold everything?
 #raw_email = getEmail(latest_email_uid)
 #parseMail(raw_email)
@@ -259,21 +310,59 @@ result, data = mail.uid('search', None, "ALL") # change second parameter to sear
 #sendEmail("test_game", "rpaliwoda@googlemail.com")
 
 # bits of this can probably go into functions
-gameList = getGamesList(datadir)
-gameData = dict()
-gameMenuList = dict()
-listNo = 1
-for game in gameList:
-	# populating dict of game data; 0: state
-	gameData[game] = (getGameStatus(game), "era", "turn", "nation")
-	# setting up list of games for menu
-	gameMenuList[listNo] = game
-	# incrementing listNo
-	listNo = listNo + 1
+# gameList = getGamesList(datadir)
+# gameData = dict()
+# gameMenuList = dict()
+# listNo = 1
+# for game in gameList:
+	# # populating dict of game data; 0: state
+	# gameData[game] = (getGameStatus(game), "era", "turn", "nation")
+	# # setting up list of games for menu
+	# gameMenuList[listNo] = game
+	# # incrementing listNo
+	# listNo = listNo + 1
 
-#print(game_menu)
+# #print(game_menu)
 	
-for gameNo in gameMenuList:
-	print(str(gameNo) + ".", gameMenuList[gameNo], "(state: " + gameData[gameMenuList[gameNo]][0] + ")")
+# for gameNo in gameMenuList:
+	# print(str(gameNo) + ".", gameMenuList[gameNo], "(state: " + gameData[gameMenuList[gameNo]][0] + ")")
 
-# https://yuji.wordpress.com/2011/06/22/python-imaplib-imap-example-with-gmail/ mentions we need to do other stuff to get at the text of it. Not sure how to get at the attachment, as we may not care about the text
+# very basic command line thing to test stuff
+while True:
+	print("\nCurrently managing game:", gameName)
+	print("Era:", era)
+	print("Nation:", nation, "\n")
+	print("1. Get latest .trn file from inbox (" + address + ")")
+	print("2. Send .2h turn file to llamaserver")
+	print("3. Send pretender to llamaserver")
+	print("4. Change managed game")
+	print("0. Quit\n")
+	option = input("> ")
+	if option == "0":
+		quit()
+	elif option == "1":
+		# find latest turn e-mail for game in inbox
+		result, data = mail.uid('search', None, 'SUBJECT "turn" SUBJECT "' + gameName + '" NOT SUBJECT "received"')
+		email_uids = data[0].split()
+		# we get emails in order earliest to latest, so email_uids[-1] should always be the latest email found
+		latest_uid = email_uids[-1]
+		# get attachment and copy attachment to game folder
+		# also perhaps make game folder if it doesn't exist?
+		raw_email = getEmail(latest_uid)
+		getTurnFile(raw_email, gameName)
+	elif option == "2":
+		sendTurn(gameName, era, nation)
+	elif option == "3":
+		pretenderFile = input("Pretender file name? ")
+		sendPretender(gameName, pretenderFile)
+	elif option == "4":
+		print("Press return without entering anything to keep current value")
+		tempGameName = input("New game name: ")
+		if tempGameName is not "":
+			gameName = tempGameName
+		tempEra = input("Era (early/mid/late): ")
+		if tempEra is not "":
+			era = tempEra
+		tempNation = input("Nation: ")
+		if tempNation is not "":
+			nation = tempNation
