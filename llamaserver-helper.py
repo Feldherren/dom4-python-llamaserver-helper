@@ -81,6 +81,8 @@ parser.add_argument('nation', help='nation played')
 parser.add_argument('era', help='era of game (early/mid/late)')
 args = parser.parse_args()
 
+# when the GUI is in, will probably want the option for logging, or to output stuff to the command line window
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 address = config['Mail']['email']
@@ -91,15 +93,15 @@ gameName = args.gameName
 nation = args.nation
 era = args.era
 
-eras = ['early', 'mid', 'late']
+eras = {'early':'early', 'ea':'early', 'early age':'early', 'early ages':'early', 'mid':'mid', 'ma':'mid', 'middle age':'mid', 'middle ages':'mid', 'late':'late', 'la':'late', 'late age':'late', 'late ages':'late'}
 
 # dicts setting up 'proper' nation names as used in save files
 # these should probably be set in a text file or something, rather than hard-coded
 # need to check and make sure the values are exactly how the name is in 2h files, in most cases here
 # thing currently relying on these isn't working; supposed to be for the sanity checks on nation names
-earlyNations = {'Arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'Ermor':'ermor', 'Ulm':'ulm', 'Marverni':'marverni', 'Sauromatia':'sauromatia', "T'ien Ch'i":'tienchi', 'Tienchi':'tienchi', 'Tien':'tienchi', 'Machaka':'machaka','Mictlan':'mictlan', 'Abysia':'abysia', 'Caelum':'caelum', "C'tis":'ctis', 'Ctis':'ctis', 'Pangaea':'pangaea', 'Agartha':'agartha', "Tir na n'Og":'tirnanog', 'Tirnanog':'tirnanog', 'Tir':'tirnanog', 'Fomoria':'fomoria', 'Vanheim':'vanheim', 'Helheim':'helheim', 'Niefelheim':'niefelheim', 'Kailasa':'kailasa', 'Lanka':'lanka', 'Yomi':'yomi', 'Hinnom':'hinnom', 'Ur':'ur', 'Berytos':'berytos', 'Xibalba':'xibalba', 'Atlantis':'atlantis', "R'lyeh":'rlyeh', 'Rlyeh':'rlyeh', 'Pelagia':'pelagia', 'Oceania':'oceania', 'Therodos':'therodos'}
-midNations = {'Arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'Ermor':'ermor', 'Sceleria':'sceleria', 'Pythium':'pythium', 'Man':'man', 'Eriu':'eriu', 'Ulm':'ulm', 'Marignon':'marignon', 'Mictlan':'mictlan', "T'ien Ch'i":'tienchi', 'Tienchi':'tienchi', 'Tien':'tienchi', 'Machaka':'machaka', 'Agartha':'agartha', 'Abysia':'abysia', 'Caelum':'caelum', "C'tis":'ctis', 'Ctis':'ctis', 'Pangaea':'pangaea', 'Asphodel':'asphodel', 'Vanheim':'vanheim', 'Jotunheim':'jotunheim', 'Vanarus':'vanarus', 'Bandar Log': 'bandarlog', 'Bandarlog':'bandarlog', 'Shinuyama':'shinuyama', 'Shinu':'shinuyama', 'Ashdod':'ashdod', 'Nazca':'nazca', 'Xibalba':'xibalba', 'Atlantis':'atlantis', "R'lyeh":'rlyeh', 'Rlyeh':'rlyeh', 'Pelagia':'pelagia', 'Oceania':'oceania', 'Ys':'ys'}
-lateNations = {'Arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'Pythium':'pythium', 'Lemuria':'lemuria', 'Man':'man', 'Ulm':'ulm', 'Marignon':'marignon', 'Mictlan':'mictlan', "T'ien Ch'i":'tienchi', 'Tienchi':'tienchi', 'Tien':'tienchi', 'Jomon':'jomon', 'Agartha':'agartha', 'Abysia':'abysia', 'Caelum':'caelum', "C'tis":'ctis', 'Ctis':'ctis', 'Pangaea':'pangaea', 'Midgard':'midgard', 'Utgard':'utgard', 'Bogarus':'bogarus', 'Patala':'patala', 'Gath':'gath', 'Ragha':'ragha', 'Xibalba':'xibalba', 'Atlantis':'atlantis', "R'lyeh":'rlyeh', 'Rlyeh':'rlyeh'}
+earlyNations = {'arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'ermor':'ermor', 'ulm':'ulm', 'marverni':'marverni', 'sauromatia':'sauromatia', 'sauro':'sauromatia', "t'ien ch'i":'tienchi', 'tienchi':'tienchi', 'tien':'tienchi', 'machaka':'machaka','mictlan':'mictlan', 'abysia':'abysia', 'caelum':'caelum', "c'tis":'ctis', 'ctis':'ctis', 'pangaea':'pangaea', 'pan':'pangaea', 'agartha':'agartha', "tir na n'og":'tirnanog', 'tirnanog':'tirnanog', 'tir':'tirnanog', 'fomoria':'fomoria', 'vanheim':'vanheim', 'helheim':'helheim', 'niefelheim':'niefelheim', 'kailasa':'kailasa', 'lanka':'lanka', 'yomi':'yomi', 'hinnom':'hinnom', 'ur':'ur', 'berytos':'berytos', 'xibalba':'xibalba', 'atlantis':'atlantis', "r'lyeh":'rlyeh', 'rlyeh':'rlyeh', 'pelagia':'pelagia', 'oceania':'oceania', 'therodos':'therodos'}
+midNations = {'arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'ermor':'ermor', 'sceleria':'sceleria', 'pythium':'pythium', 'man':'man', 'eriu':'eriu', 'ulm':'ulm', 'marignon':'marignon', 'mari':'marignon', 'mictlan':'mictlan', "t'ien ch'i":'tienchi', 'tienchi':'tienchi', 'tien':'tienchi', 'machaka':'machaka', 'agartha':'agartha', 'abysia':'abysia', 'caelum':'caelum', "c'tis":'ctis', 'ctis':'ctis', 'pangaea':'pangaea', 'pan':'pangaea', 'asphodel':'asphodel', 'vanheim':'vanheim', 'jotunheim':'jotunheim', 'vanarus':'vanarus', 'bandar log': 'bandarlog', 'bandarlog':'bandarlog', 'bandar':'bandarlog', 'shinuyama':'shinuyama', 'shinu':'shinuyama', 'ashdod':'ashdod', 'nazca':'nazca', 'xibalba':'xibalba', 'atlantis':'atlantis', "r'lyeh":'rlyeh', 'rlyeh':'rlyeh', 'pelagia':'pelagia', 'oceania':'oceania', 'ys':'ys'}
+lateNations = {'arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'pythium':'pythium', 'lemuria':'lemuria', 'man':'man', 'ulm':'ulm', 'marignon':'marignon', 'mari':'marignon', 'mictlan':'mictlan', "t'ien ch'i":'tienchi', 'tienchi':'tienchi', 'tien':'tienchi', 'jomon':'jomon', 'agartha':'agartha', 'abysia':'abysia', 'caelum':'caelum', "c'tis":'ctis', 'ctis':'ctis', 'pangaea':'pangaea', 'pan':'pangaea', 'midgard':'midgard', 'utgard':'utgard', 'bogarus':'bogarus', 'patala':'patala', 'gath':'gath', 'ragha':'ragha', 'xibalba':'xibalba', 'atlantis':'atlantis', "r'lyeh":'rlyeh', 'rlyeh':'rlyeh'}
 
 # regex for matching text of pretender-confirmation email
 # match groups, in order: nation, game name
@@ -190,6 +192,18 @@ def getTurnFile(raw_email, game):
 			os.rename(os.path.join(datadir, "savedgames", game, era+"_"+nation+".trn"), os.path.join(datadir, "savedgames", game, era+"_"+nation+"_old.trn"))
 	# get new turn file from email
 	saveAttachment(email_message, os.path.join(datadir, "savedgames", game))
+
+def getLatestTurn(gameName):
+	mail.select("inbox")
+	result, data = mail.uid('search', None, 'SUBJECT "turn" SUBJECT "' + gameName + '" NOT SUBJECT "received"')
+	email_uids = data[0].split()
+	# we get emails in order earliest to latest, so email_uids[-1] should always be the latest email found
+	latest_uid = email_uids[-1]
+	# get attachment and copy attachment to game folder
+	raw_email = getEmail(latest_uid)
+	# prints name of email it'll get the attachment from
+	print(getSubject(raw_email))
+	return getTurnFile(raw_email, gameName)
 
 # note that if you want to get text content (body) and the email contains
 # multiple payloads (plaintext/ html), you must parse each message separately.
@@ -312,31 +326,27 @@ def setEra(tempEra):
 	if tempEra != "":
 		global era
 		if tempEra.lower() in eras:
-			era = tempEra
+			era = eras[tempEra.lower()]
 
 def setNation(tempNation):
 	if tempNation != "":
 		global nation
-		nation = tempNation
-		# # sanity check just isn't working, currently
-		# global earlyNations
-		# global midNations
-		# global lateNations
-		# # sanity-check based on dicts set at beginning
-		# print(tempNation)
-		# if era == 'early':
-			# if tempNation in earlyNations:
-				# print(earlyNations[tempNation])
-				# print(earlyNations)
-				# nation = earlyNations[tempNation]
-		# elif era == 'mid':
-			# if tempNation in midNations:
-				# print(midNations[tempNation])
-				# nation = midNations[tempNation]
-		# elif era == 'late':
-			# if tempNation in lateNations:
-				# print(lateNations[tempNation])
-				# nation = lateNations[tempNation]
+		#nation = tempNation
+		# sanity check just isn't working, currently
+		global earlyNations
+		global midNations
+		global lateNations
+		# sanity-check based on dicts set at beginning
+		print(tempNation)
+		if era == 'early':
+			if tempNation.lower() in earlyNations:
+				nation = earlyNations[tempNation.lower()]
+		elif era == 'mid':
+			if tempNation.lower() in midNations:
+				nation = midNations[tempNation.lower()]
+		elif era == 'late':
+			if tempNation.lower() in lateNations:
+				nation = lateNations[tempNation.lower()]
 
 def setGameName(tempGameName):
 	if tempGameName != "":
@@ -400,16 +410,7 @@ while True:
 	if option == "0":
 		quit()
 	elif option == "1": # get latest .trn
-		mail.select("inbox")
-		result, data = mail.uid('search', None, 'SUBJECT "turn" SUBJECT "' + gameName + '" NOT SUBJECT "received"')
-		email_uids = data[0].split()
-		# we get emails in order earliest to latest, so email_uids[-1] should always be the latest email found
-		latest_uid = email_uids[-1]
-		# get attachment and copy attachment to game folder
-		raw_email = getEmail(latest_uid)
-		# prints name of email it'll get the attachment from
-		print(getSubject(raw_email))
-		getTurnFile(raw_email, gameName)
+		getLatestTurn(gameName)
 	elif option == "2": # send latest 2h
 		sendTurn(gameName, era, nation)
 	elif option == "3": # send pretender
