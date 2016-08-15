@@ -74,6 +74,7 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 
 # argparse stuff; currently necessary for test command line interface way below
+# accept no input for gameName, nation, era?
 parser = argparse.ArgumentParser(description='Handles sending and receiving .2h files and .trn files to and from llamaserver, for Dominions PBEM games')
 parser.add_argument('gameName', help='name of game, as shown on game folder')
 parser.add_argument('nation', help='nation played')
@@ -89,6 +90,16 @@ datadir = config['Game']['datadir']
 gameName = args.gameName
 nation = args.nation
 era = args.era
+
+eras = ['early', 'mid', 'late']
+
+# dicts setting up 'proper' nation names as used in save files
+# these should probably be set in a text file or something, rather than hard-coded
+# need to check and make sure the values are exactly how the name is in 2h files, in most cases here
+# thing currently relying on these isn't working; supposed to be for the sanity checks on nation names
+earlyNations = {'Arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'Ermor':'ermor', 'Ulm':'ulm', 'Marverni':'marverni', 'Sauromatia':'sauromatia', "T'ien Ch'i":'tienchi', 'Tienchi':'tienchi', 'Tien':'tienchi', 'Machaka':'machaka','Mictlan':'mictlan', 'Abysia':'abysia', 'Caelum':'caelum', "C'tis":'ctis', 'Ctis':'ctis', 'Pangaea':'pangaea', 'Agartha':'agartha', "Tir na n'Og":'tirnanog', 'Tirnanog':'tirnanog', 'Tir':'tirnanog', 'Fomoria':'fomoria', 'Vanheim':'vanheim', 'Helheim':'helheim', 'Niefelheim':'niefelheim', 'Kailasa':'kailasa', 'Lanka':'lanka', 'Yomi':'yomi', 'Hinnom':'hinnom', 'Ur':'ur', 'Berytos':'berytos', 'Xibalba':'xibalba', 'Atlantis':'atlantis', "R'lyeh":'rlyeh', 'Rlyeh':'rlyeh', 'Pelagia':'pelagia', 'Oceania':'oceania', 'Therodos':'therodos'}
+midNations = {'Arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'Ermor':'ermor', 'Sceleria':'sceleria', 'Pythium':'pythium', 'Man':'man', 'Eriu':'eriu', 'Ulm':'ulm', 'Marignon':'marignon', 'Mictlan':'mictlan', "T'ien Ch'i":'tienchi', 'Tienchi':'tienchi', 'Tien':'tienchi', 'Machaka':'machaka', 'Agartha':'agartha', 'Abysia':'abysia', 'Caelum':'caelum', "C'tis":'ctis', 'Ctis':'ctis', 'Pangaea':'pangaea', 'Asphodel':'asphodel', 'Vanheim':'vanheim', 'Jotunheim':'jotunheim', 'Vanarus':'vanarus', 'Bandar Log': 'bandarlog', 'Bandarlog':'bandarlog', 'Shinuyama':'shinuyama', 'Shinu':'shinuyama', 'Ashdod':'ashdod', 'Nazca':'nazca', 'Xibalba':'xibalba', 'Atlantis':'atlantis', "R'lyeh":'rlyeh', 'Rlyeh':'rlyeh', 'Pelagia':'pelagia', 'Oceania':'oceania', 'Ys':'ys'}
+lateNations = {'Arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'Pythium':'pythium', 'Lemuria':'lemuria', 'Man':'man', 'Ulm':'ulm', 'Marignon':'marignon', 'Mictlan':'mictlan', "T'ien Ch'i":'tienchi', 'Tienchi':'tienchi', 'Tien':'tienchi', 'Jomon':'jomon', 'Agartha':'agartha', 'Abysia':'abysia', 'Caelum':'caelum', "C'tis":'ctis', 'Ctis':'ctis', 'Pangaea':'pangaea', 'Midgard':'midgard', 'Utgard':'utgard', 'Bogarus':'bogarus', 'Patala':'patala', 'Gath':'gath', 'Ragha':'ragha', 'Xibalba':'xibalba', 'Atlantis':'atlantis', "R'lyeh":'rlyeh', 'Rlyeh':'rlyeh'}
 
 # regex for matching text of pretender-confirmation email
 # match groups, in order: nation, game name
@@ -148,12 +159,13 @@ def sendPretender(game, pretenderFile):
 		print("Error: file not found")
 	return
 
-def sendTurn(game, era, nation):
+def sendTurn(gameName, era, nation):
 	#gameDir = os.path.join(datadir, "savedgames", gameName) # add 'era+"_"+nation+".2h"' to the end for full path to game, instead?
 	# TO-DO: complete this thing
 	# find correct 2h file here; don't forget game folder can contain more than one 2h, so we need to know nation to do this properly
 	# name format is [early/mid/late]_[nation].2h but all 2h files present should have the same era prefix
 	turnFile = os.path.join(datadir, "savedgames", gameName, era+"_"+nation+".2h")
+	#print(turnFile)
 	if os.path.isfile(turnFile):
 		# send .2h file to turns@llamaserver.net
 		sendEmail(gameName, "turns@llamaserver.net", turnFile)
@@ -162,9 +174,21 @@ def sendTurn(game, era, nation):
 		print("Error: file not found")
 	return
 
+# this can explode  if it can't connect
 def getTurnFile(raw_email, game):
 	email_message = email.message_from_bytes(raw_email)
 	# create game folder if it doesn't exist?
+	if not os.path.exists(os.path.join(datadir, "savedgames", game)):
+		os.makedirs(os.path.join(datadir, "savedgames", game))
+	# remove old old turn file
+	if os.path.exists(os.path.join(datadir, "savedgames", game, era+"_"+nation+"_old.trn")):
+		if os.path.isfile(os.path.join(datadir, "savedgames", game, era+"_"+nation+"_old.trn")):
+			os.remove(os.path.join(datadir, "savedgames", game, era+"_"+nation+"_old.trn"))
+	# rename previous turn file to old, if it exists
+	if os.path.exists(os.path.join(datadir, "savedgames", game, era+"_"+nation+".trn")):
+		if os.path.isfile(os.path.join(datadir, "savedgames", game, era+"_"+nation+".trn")):
+			os.rename(os.path.join(datadir, "savedgames", game, era+"_"+nation+".trn"), os.path.join(datadir, "savedgames", game, era+"_"+nation+"_old.trn"))
+	# get new turn file from email
 	saveAttachment(email_message, os.path.join(datadir, "savedgames", game))
 
 # note that if you want to get text content (body) and the email contains
@@ -223,6 +247,10 @@ def printMail(raw_email):
 		print(email_subject)
 		print(email_text)
 	return
+
+def getSubject(raw_email):
+	email_message = email.message_from_bytes(raw_email)
+	return email_message['Subject']
 	
 def sendEmail(subject, recipient_address, attachment_path=None):
 	# attachment_path: full path
@@ -279,8 +307,43 @@ def saveAttachment(msg, download_folder="/tmp"):
 			fp.write(part.get_payload(decode=True))
 			fp.close()
 	return att_path
+	
+def setEra(tempEra):
+	if tempEra != "":
+		global era
+		if tempEra.lower() in eras:
+			era = tempEra
 
-mail = imaplib.IMAP4_SSL('imap.gmail.com') # possibly allow users to change that in config, for other email sources
+def setNation(tempNation):
+	if tempNation != "":
+		global nation
+		nation = tempNation
+		# # sanity check just isn't working, currently
+		# global earlyNations
+		# global midNations
+		# global lateNations
+		# # sanity-check based on dicts set at beginning
+		# print(tempNation)
+		# if era == 'early':
+			# if tempNation in earlyNations:
+				# print(earlyNations[tempNation])
+				# print(earlyNations)
+				# nation = earlyNations[tempNation]
+		# elif era == 'mid':
+			# if tempNation in midNations:
+				# print(midNations[tempNation])
+				# nation = midNations[tempNation]
+		# elif era == 'late':
+			# if tempNation in lateNations:
+				# print(lateNations[tempNation])
+				# nation = lateNations[tempNation]
+
+def setGameName(tempGameName):
+	if tempGameName != "":
+		global gameName 
+		gameName = tempGameName
+
+mail = imaplib.IMAP4_SSL('imap.gmail.com', 993) # possibly allow users to change that in config, for other email sources
 try:
 	mail.login(address, password)
 except:
@@ -288,10 +351,6 @@ except:
 	raise
 	
 mail.select("inbox") # possibly put this in config
-
-#outmail = smtplib.SMTP('smtp.gmail.com:587')
-#outmail.starttls()
-
 # only gets the latest email in inbox (or other folder); if the latest e-mail is deleted or moved it'll go for the new latest e-mail
 # though this is useful if we know the file for the turn is going to be the latest e-mail
 # http://stackoverflow.com/questions/2983647/how-do-you-iterate-through-each-email-in-your-inbox-using-python has an example for iterating through a mailbox
@@ -340,29 +399,36 @@ while True:
 	option = input("> ")
 	if option == "0":
 		quit()
-	elif option == "1":
-		# find latest turn e-mail for game in inbox
+	elif option == "1": # get latest .trn
+		mail.select("inbox")
 		result, data = mail.uid('search', None, 'SUBJECT "turn" SUBJECT "' + gameName + '" NOT SUBJECT "received"')
 		email_uids = data[0].split()
 		# we get emails in order earliest to latest, so email_uids[-1] should always be the latest email found
 		latest_uid = email_uids[-1]
 		# get attachment and copy attachment to game folder
-		# also perhaps make game folder if it doesn't exist?
 		raw_email = getEmail(latest_uid)
+		# prints name of email it'll get the attachment from
+		print(getSubject(raw_email))
 		getTurnFile(raw_email, gameName)
-	elif option == "2":
+	elif option == "2": # send latest 2h
 		sendTurn(gameName, era, nation)
-	elif option == "3":
+	elif option == "3": # send pretender
 		pretenderFile = input("Pretender file name? ")
 		sendPretender(gameName, pretenderFile)
 	elif option == "4":
 		print("Press return without entering anything to keep current value")
-		tempGameName = input("New game name: ")
-		if tempGameName is not "":
-			gameName = tempGameName
+		tempName = input("New game name: ")
+		setGameName(tempName)
 		tempEra = input("Era (early/mid/late): ")
-		if tempEra is not "":
-			era = tempEra
+		setEra(tempEra)
 		tempNation = input("Nation: ")
-		if tempNation is not "":
-			nation = tempNation
+		setNation(tempNation)
+
+# usage notes:
+# sending pretender files works
+# sending .2h files works
+# getting latest .trn file works; problem was python didn't want to overwrite the existing one, despite 'wb' apparently doing that normally?
+# mostly works; gmail seems to return previous turn as latest sometimes?
+# solved: needed to reselect mailbox first
+# falls over more often, now, though
+# solved: didn't like that I hadn't specified a port, for some reason
