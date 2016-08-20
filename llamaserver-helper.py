@@ -337,7 +337,6 @@ def setNation(tempNation):
 		global midNations
 		global lateNations
 		# sanity-check based on dicts set at beginning
-		print(tempNation)
 		if era == 'early':
 			if tempNation.lower() in earlyNations:
 				nation = earlyNations[tempNation.lower()]
@@ -350,7 +349,9 @@ def setNation(tempNation):
 
 def setGameName(tempGameName):
 	if tempGameName != "":
-		global gameName 
+		global gameName
+		# sanity checks here - replace spaces with _s
+		# is there anything else llamaserver and/or dom4 enforce in game names?
 		gameName = tempGameName
 
 mail = imaplib.IMAP4_SSL('imap.gmail.com', 993) # possibly allow users to change that in config, for other email sources
@@ -398,32 +399,43 @@ mail.select("inbox") # possibly put this in config
 
 # very basic command line thing to test stuff
 while True:
-	print("\nCurrently managing game:", gameName)
-	print("Era:", era)
-	print("Nation:", nation, "\n")
-	print("1. Get latest .trn file from inbox (" + address + ")")
-	print("2. Send .2h turn file to llamaserver")
-	print("3. Send pretender to llamaserver")
-	print("4. Change managed game")
-	print("0. Quit\n")
-	option = input("> ")
-	if option == "0":
-		quit()
-	elif option == "1": # get latest .trn
-		getLatestTurn(gameName)
-	elif option == "2": # send latest 2h
-		sendTurn(gameName, era, nation)
-	elif option == "3": # send pretender
-		pretenderFile = input("Pretender file name? ")
-		sendPretender(gameName, pretenderFile)
-	elif option == "4":
-		print("Press return without entering anything to keep current value")
-		tempName = input("New game name: ")
-		setGameName(tempName)
-		tempEra = input("Era (early/mid/late): ")
-		setEra(tempEra)
-		tempNation = input("Nation: ")
-		setNation(tempNation)
+	if gameName == "" or era == "" or nation == "":
+		if gameName == "":
+			tempName = input("Game name: ")
+			setGameName(tempName)
+		if era == "":
+			tempEra = input("Era (early/mid/late): ")
+			setEra(tempEra)
+		if nation == "":
+			tempNation = input("Nation: ")
+			setNation(tempNation)
+	else:
+		print("\nCurrently managing game:", gameName)
+		print("Era:", era)
+		print("Nation:", nation, "\n")
+		print("1. Get latest .trn file from inbox (" + address + ")")
+		print("2. Send .2h turn file to llamaserver")
+		print("3. Send pretender to llamaserver")
+		print("4. Change managed game")
+		print("0. Quit\n")
+		option = input("> ")
+		if option == "0":
+			quit()
+		elif option == "1": # get latest .trn
+			getLatestTurn(gameName)
+		elif option == "2": # send latest 2h
+			sendTurn(gameName, era, nation)
+		elif option == "3": # send pretender
+			pretenderFile = input("Pretender file name? ")
+			sendPretender(gameName, pretenderFile)
+		elif option == "4":
+			print("Press return without entering anything to keep current value")
+			tempName = input("New game name: ")
+			setGameName(tempName)
+			tempEra = input("Era (early/mid/late): ")
+			setEra(tempEra)
+			tempNation = input("Nation: ")
+			setNation(tempNation)
 
 # usage notes:
 # sending pretender files works
