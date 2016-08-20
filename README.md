@@ -5,3 +5,6 @@ Works with a GMail account. You need to add the email and password to a config f
 
 Current eventual plans include a fancy (and probably optional) GUI, better awareness of game state (such as game turn, or llamaserver telling you off for sending the wrong thing), and the option to save all old .trn files in a subfolder (when it's aware of game turn, so it can rename the files properly).
 Please post any issues and suggestions you have to the project repo (https://github.com/Feldherren/dom4-python-llamaserver-helper).
+
+# Changelog
+2016/08/20: removed game name, era and nation command line arguments, replaced with the application prompting user for game name, era and nation when launched. Also, you can now customise nation aliases in the early_nations.txt, mid_nations.txt and late_nations.txt files; the format is [alias]:[file nation name], so if you want to call mid ermor 'jerks', you'd add a new line 'jerks:ermor' (sans apostrophes) to mid_nations.txt. The data file paths are defined in the config file, so you can keep multiple sets if desired (for mods adding or removing nations).

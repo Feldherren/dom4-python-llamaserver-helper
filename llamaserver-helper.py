@@ -74,7 +74,6 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 
 # argparse stuff; currently necessary for test command line interface way below
-# accept no input for gameName, nation, era?
 parser = argparse.ArgumentParser(description='Handles sending and receiving .2h files and .trn files to and from llamaserver, for Dominions PBEM games')
 parser.add_argument('config', help='path to config file containing email, password and Dom4 data directory (see template)')
 args = parser.parse_args()
@@ -86,6 +85,9 @@ config.read(args.config)
 address = config['Mail']['email']
 password = config['Mail']['password']
 datadir = config['Game']['datadir']
+earlyNationsFile = config['Data']['early_nations']
+midNationsFile = config['Data']['mid_nations']
+lateNationsFile = config['Data']['late_nations']
 
 # test using details to log in to email, first?
 
@@ -96,12 +98,19 @@ era = ""
 eras = {'early':'early', 'ea':'early', 'early age':'early', 'early ages':'early', 'mid':'mid', 'ma':'mid', 'middle age':'mid', 'middle ages':'mid', 'late':'late', 'la':'late', 'late age':'late', 'late ages':'late'}
 
 # dicts setting up 'proper' nation names as used in save files
-# these should probably be set in a text file or something, rather than hard-coded
-# need to check and make sure the values are exactly how the name is in 2h files, in most cases here
-# thing currently relying on these isn't working; supposed to be for the sanity checks on nation names
-earlyNations = {'arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'ermor':'ermor', 'ulm':'ulm', 'marverni':'marverni', 'sauromatia':'sauromatia', 'sauro':'sauromatia', "t'ien ch'i":'tienchi', 'tienchi':'tienchi', 'tien':'tienchi', 'machaka':'machaka','mictlan':'mictlan', 'abysia':'abysia', 'caelum':'caelum', "c'tis":'ctis', 'ctis':'ctis', 'pangaea':'pangaea', 'pan':'pangaea', 'agartha':'agartha', "tir na n'og":'tirnanog', 'tirnanog':'tirnanog', 'tir':'tirnanog', 'fomoria':'fomoria', 'vanheim':'vanheim', 'helheim':'helheim', 'niefelheim':'niefelheim', 'kailasa':'kailasa', 'lanka':'lanka', 'yomi':'yomi', 'hinnom':'hinnom', 'ur':'ur', 'berytos':'berytos', 'xibalba':'xibalba', 'atlantis':'atlantis', "r'lyeh":'rlyeh', 'rlyeh':'rlyeh', 'pelagia':'pelagia', 'oceania':'oceania', 'therodos':'therodos'}
-midNations = {'arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'ermor':'ermor', 'sceleria':'sceleria', 'pythium':'pythium', 'man':'man', 'eriu':'eriu', 'ulm':'ulm', 'marignon':'marignon', 'mari':'marignon', 'mictlan':'mictlan', "t'ien ch'i":'tienchi', 'tienchi':'tienchi', 'tien':'tienchi', 'machaka':'machaka', 'agartha':'agartha', 'abysia':'abysia', 'caelum':'caelum', "c'tis":'ctis', 'ctis':'ctis', 'pangaea':'pangaea', 'pan':'pangaea', 'asphodel':'asphodel', 'vanheim':'vanheim', 'jotunheim':'jotunheim', 'vanarus':'vanarus', 'bandar log': 'bandarlog', 'bandarlog':'bandarlog', 'bandar':'bandarlog', 'shinuyama':'shinuyama', 'shinu':'shinuyama', 'ashdod':'ashdod', 'nazca':'nazca', 'xibalba':'xibalba', 'atlantis':'atlantis', "r'lyeh":'rlyeh', 'rlyeh':'rlyeh', 'pelagia':'pelagia', 'oceania':'oceania', 'ys':'ys'}
-lateNations = {'arcoscephale':'arcoscephale', 'arco':'arcoscephale', 'pythium':'pythium', 'lemuria':'lemuria', 'man':'man', 'ulm':'ulm', 'marignon':'marignon', 'mari':'marignon', 'mictlan':'mictlan', "t'ien ch'i":'tienchi', 'tienchi':'tienchi', 'tien':'tienchi', 'jomon':'jomon', 'agartha':'agartha', 'abysia':'abysia', 'caelum':'caelum', "c'tis":'ctis', 'ctis':'ctis', 'pangaea':'pangaea', 'pan':'pangaea', 'midgard':'midgard', 'utgard':'utgard', 'bogarus':'bogarus', 'patala':'patala', 'gath':'gath', 'ragha':'ragha', 'xibalba':'xibalba', 'atlantis':'atlantis', "r'lyeh":'rlyeh', 'rlyeh':'rlyeh'}
+# these get their alias:nation name pairs from data files listed in the config file. By default these are pointed at files included with the application
+earlyNations = {}
+for line in open(earlyNationsFile, 'r'):
+	alias, nationName = line.split(':')
+	earlyNations[alias] = nationName
+midNations = {}
+for line in open(midNationsFile, 'r'):
+	alias, nationName = line.split(':')
+	midNations[alias] = nationName
+lateNations = {}
+for line in open(lateNationsFile, 'r'):
+	alias, nationName = line.split(':')
+	lateNations[alias] = nationName
 
 # regex for matching text of pretender-confirmation email
 # match groups, in order: nation, game name
