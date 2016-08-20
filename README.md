@@ -6,8 +6,8 @@ Works with a GMail account. You need to add the email and password to a config f
 Current eventual plans include a fancy (and probably optional) GUI, better awareness of game state (such as game turn, or llamaserver telling you off for sending the wrong thing), and the option to save all old .trn files in a subfolder (when it's aware of game turn, so it can rename the files properly). Also possibly a more-professionally-written readme at some point.
 Please post any issues and suggestions you have to the project repo (https://github.com/Feldherren/dom4-python-llamaserver-helper).
 
-# How To Run
-Install the latest version of Python 3 (https://www.python.org/downloads/)
+# Quick-Start
+Install the latest version of Python 3 (https://www.python.org/downloads/) if you don't have it.
 
 Make a copy of config-template.ini and rename it something sensible; config.ini is good. Open it and enter your email address, password and Dom4 data directory path; the location Dom4 takes you to from 'open data dir' in game tools.
 
