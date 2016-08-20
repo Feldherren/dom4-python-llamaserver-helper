@@ -76,22 +76,22 @@ from email.mime.multipart import MIMEMultipart
 # argparse stuff; currently necessary for test command line interface way below
 # accept no input for gameName, nation, era?
 parser = argparse.ArgumentParser(description='Handles sending and receiving .2h files and .trn files to and from llamaserver, for Dominions PBEM games')
-parser.add_argument('gameName', help='name of game, as shown on game folder')
-parser.add_argument('nation', help='nation played')
-parser.add_argument('era', help='era of game (early/mid/late)')
+parser.add_argument('config', help='path to config file containing email, password and Dom4 data directory (see template)')
 args = parser.parse_args()
 
 # when the GUI is in, will probably want the option for logging, or to output stuff to the command line window
 
 config = configparser.ConfigParser()
-config.read('config.ini')
+config.read(args.config)
 address = config['Mail']['email']
 password = config['Mail']['password']
 datadir = config['Game']['datadir']
 
-gameName = args.gameName
-nation = args.nation
-era = args.era
+# test using details to log in to email, first?
+
+gameName = ""
+nation = ""
+era = ""
 
 eras = {'early':'early', 'ea':'early', 'early age':'early', 'early ages':'early', 'mid':'mid', 'ma':'mid', 'middle age':'mid', 'middle ages':'mid', 'late':'late', 'la':'late', 'late age':'late', 'late ages':'late'}
 
@@ -195,7 +195,7 @@ def getTurnFile(raw_email, game):
 
 def getLatestTurn(gameName):
 	mail.select("inbox")
-	result, data = mail.uid('search', None, 'SUBJECT "turn" SUBJECT "' + gameName + '" NOT SUBJECT "received"')
+	result, data = mail.uid('search', None, 'SUBJECT "turn" SUBJECT "' + gameName + '" NOT SUBJECT "received"') # might return other games with the given name as a partial part of the other game's name?
 	email_uids = data[0].split()
 	# we get emails in order earliest to latest, so email_uids[-1] should always be the latest email found
 	latest_uid = email_uids[-1]
@@ -433,3 +433,5 @@ while True:
 # solved: needed to reselect mailbox first
 # falls over more often, now, though
 # solved: didn't like that I hadn't specified a port, for some reason
+
+# prevent attempting to send/receive turns and pretenders until game details are added
