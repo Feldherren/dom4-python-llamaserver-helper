@@ -16,4 +16,5 @@ Open command prompt (or equivalent) at location of llamaserver-helper.py for sim
 Type this at the command prompt: py llamaserver-helper.py config.ini
 
 # Changelog
+2016/08/21: fixed incorrect file names issue
 2016/08/20: removed game name, era and nation command line arguments, replaced with the application prompting user for game name, era and nation when launched. Also, you can now customise nation aliases in the early_nations.txt, mid_nations.txt and late_nations.txt files; the format is [alias]:[file nation name], so if you want to call mid ermor 'jerks', you'd add a new line 'jerks:ermor' (sans apostrophes) to mid_nations.txt. The data file paths are defined in the config file, so you can keep multiple sets if desired (for mods adding or removing nations). Also, added how-to steps, the changelog and other useful stuff to the readme.
