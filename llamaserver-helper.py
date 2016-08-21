@@ -73,13 +73,13 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 
-# argparse stuff; currently necessary for test command line interface way below
+# argparse stuff
+# when the GUI is in, will probably want the option for logging, or to output stuff to the command line window
 parser = argparse.ArgumentParser(description='Handles sending and receiving .2h files and .trn files to and from llamaserver, for Dominions PBEM games')
 parser.add_argument('config', help='path to config file containing email, password and Dom4 data directory (see template)')
 args = parser.parse_args()
 
-# when the GUI is in, will probably want the option for logging, or to output stuff to the command line window
-
+# config parser stuff; uses the config file specified as an argument when launching the application
 config = configparser.ConfigParser()
 config.read(args.config)
 address = config['Mail']['email']
@@ -94,6 +94,7 @@ lateNationsFile = config['Data']['late_nations']
 gameName = ""
 nation = ""
 era = ""
+currentTurn = 0 # update this when we get a turn email
 
 eras = {'early':'early', 'ea':'early', 'early age':'early', 'early ages':'early', 'mid':'mid', 'ma':'mid', 'middle age':'mid', 'middle ages':'mid', 'late':'late', 'la':'late', 'late age':'late', 'late ages':'late'}
 
@@ -102,15 +103,15 @@ eras = {'early':'early', 'ea':'early', 'early age':'early', 'early ages':'early'
 earlyNations = {}
 for line in open(earlyNationsFile, 'r'):
 	alias, nationName = line.split(':')
-	earlyNations[alias] = nationName
+	earlyNations[alias] = nationName.strip()
 midNations = {}
 for line in open(midNationsFile, 'r'):
 	alias, nationName = line.split(':')
-	midNations[alias] = nationName
+	midNations[alias] = nationName.strip()
 lateNations = {}
 for line in open(lateNationsFile, 'r'):
 	alias, nationName = line.split(':')
-	lateNations[alias] = nationName
+	lateNations[alias] = nationName.strip()
 
 # regex for matching text of pretender-confirmation email
 # match groups, in order: nation, game name
@@ -172,7 +173,6 @@ def sendPretender(game, pretenderFile):
 
 def sendTurn(gameName, era, nation):
 	#gameDir = os.path.join(datadir, "savedgames", gameName) # add 'era+"_"+nation+".2h"' to the end for full path to game, instead?
-	# TO-DO: complete this thing
 	# find correct 2h file here; don't forget game folder can contain more than one 2h, so we need to know nation to do this properly
 	# name format is [early/mid/late]_[nation].2h but all 2h files present should have the same era prefix
 	turnFile = os.path.join(datadir, "savedgames", gameName, era+"_"+nation+".2h")
@@ -340,12 +340,10 @@ def setEra(tempEra):
 def setNation(tempNation):
 	if tempNation != "":
 		global nation
-		#nation = tempNation
-		# sanity check just isn't working, currently
 		global earlyNations
 		global midNations
 		global lateNations
-		# sanity-check based on dicts set at beginning
+		# sanity-check based on dicts populated at beginning
 		if era == 'early':
 			if tempNation.lower() in earlyNations:
 				nation = earlyNations[tempNation.lower()]
@@ -370,43 +368,8 @@ except:
 	print("Unexpected error:", sys.exc_info()[0])
 	raise
 	
-mail.select("inbox") # possibly put this in config
-# only gets the latest email in inbox (or other folder); if the latest e-mail is deleted or moved it'll go for the new latest e-mail
-# though this is useful if we know the file for the turn is going to be the latest e-mail
-# http://stackoverflow.com/questions/2983647/how-do-you-iterate-through-each-email-in-your-inbox-using-python has an example for iterating through a mailbox
-#result, data = mail.uid('search', None, "ALL") # change second parameter to search for string? this is essentially IMAP4.search() but returning UIDs; https://docs.python.org/3/library/imaplib.html?highlight=map#imaplib.IMAP4.search
-#latest_email_uid = data[0].split()[-1] # ditch the [-1], get list of mail IDs? Or do result, data already hold everything?
-#raw_email = getEmail(latest_email_uid)
-#parseMail(raw_email)
+mail.select("inbox") # possibly put the mailbox to use in config
 
-# gets all emails in the current mailbox; the inbox, in this case
-#email_uids = data[0].split()
-#for uid in email_uids:
-#	raw_email = getEmail(uid)
-#	parseMail(raw_email)
-
-#sendEmail("test_game", "rpaliwoda@googlemail.com", r"C:\Users\Rebecca\AppData\Roaming\Dominions4\savedgames\newlords\mid_ys_0.2h")
-#sendEmail("test_game", "rpaliwoda@googlemail.com")
-
-# bits of this can probably go into functions
-# gameList = getGamesList(datadir)
-# gameData = dict()
-# gameMenuList = dict()
-# listNo = 1
-# for game in gameList:
-	# # populating dict of game data; 0: state
-	# gameData[game] = (getGameStatus(game), "era", "turn", "nation")
-	# # setting up list of games for menu
-	# gameMenuList[listNo] = game
-	# # incrementing listNo
-	# listNo = listNo + 1
-
-# #print(game_menu)
-	
-# for gameNo in gameMenuList:
-	# print(str(gameNo) + ".", gameMenuList[gameNo], "(state: " + gameData[gameMenuList[gameNo]][0] + ")")
-
-# very basic command line thing to test stuff
 while True:
 	if gameName == "" or era == "" or nation == "":
 		if gameName == "":
@@ -455,4 +418,5 @@ while True:
 # falls over more often, now, though
 # solved: didn't like that I hadn't specified a port, for some reason
 
-# prevent attempting to send/receive turns and pretenders until game details are added
+# may not be creating folders for new games, in some circumstances? Jant reported an issue but it worked the next time he tried, to get the error text
+# make pretenders submenu, with list pretenders and send pretender options
